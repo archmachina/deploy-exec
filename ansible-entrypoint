@@ -8,8 +8,6 @@
 # Requirements for the script to run:
 # + The playbook directory must be writeable - The python env and ansible cache
 #   are stored there.
-# + The inventory must be under the playbook directory as 'inventory/<envname>'.
-#   If there is a 'shared' directory, this will also be included prior to the environment dir
 # + The playbook directory must have an ansible.cfg file
 # + The playbook directory must have a requirements.txt and requirements.yml file
 #   specifying the python and ansible requirements, respectively.
@@ -46,18 +44,6 @@ echo "Working directory: ${WORKDIR}"
 echo "New HOME directory: ${HOME}"
 
 ########
-# Determine environment
-ENV_NAME="$1"
-shift
-
-if [ "$ENV_NAME" == "" ] ; then
-  echo "Environment name is empty"
-  exit 1
-fi
-
-echo "Environment: $ENV_NAME"
-
-########
 # Set up environment
 
 # Set up venv for ansible
@@ -77,14 +63,6 @@ ansible-galaxy collection install -r requirements.yml
 
 # Ansible config file
 export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
-
-# Determine whether there is a shared inventory
-SHARED_I=""
-SHARED_D=""
-if [ -d "${WORKDIR}/inventory/shared" ] ; then
-  SHARED_I="-i"
-  SHARED_D="${WORKDIR}/inventory/shared"
-fi
 
 ########
 # Start ansible playbook
@@ -107,6 +85,6 @@ cd "${ORIGDIR}"
 
 echo "Starting ansible playbook"
 echo "----------------"
-exec ansible-playbook "${PLAYBOOK}" $SHARED_I "${SHARED_D}" -i "${WORKDIR}/inventory/$ENV_NAME" "$@"
+exec ansible-playbook "${PLAYBOOK}" "$@"
 
 exit 1
