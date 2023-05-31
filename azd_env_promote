@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Global settings
+SCRIPT=`readlink -f "$0"`
+DIR=`dirname "${SCRIPT}"`
+set -o pipefail
+
+########
+# Setup
+
+# azcli and jq must already be installed prior to running this script
+which az > /dev/null
+if [ $? -ne 0 ] ; then
+  echo "Azure CLI is not installed"
+  exit 1
+fi
+
+which jq > /dev/null
+if [ $? -ne 0 ] ; then
+  echo "jq is not installed"
+  exit 1
+fi
+
+########
+# Process inputs
+
+# First argument is the map and the second is the current environment
+PROMOTE_MAP="$1"
+shift
+SOURCE_ENV="$1"
+
+# Validate the promote map
+RESULT=`echo "${PROMOTE_MAP}" | jq -e 2>&1`
+if [ $? -ne 0 ] ; then
+  echo "Promote map is not formatted correctly:"
+  echo "$PROMOTE_MAP"
+  echo "$RESULT"
+  exit 1
+fi
+
+# Determine the target environment
+TARGET_ENV=`echo "${PROMOTE_MAP}" | jq -eMr .${SOURCE_ENV}`
+if [ $? -ne 0 ] ; then
+  echo "Failed to determine the target environment: $TARGET_ENV"
+  exit 1
+fi
+
+if [ "$TARGET_ENV" == "" ] ; then
+  echo "Empty target environment name"
+  exit 1
+fi
+
+# Display information on environments
+echo "Promote Map:"
+echo "${PROMOTE_MAP}" | jq -eM
+echo ""
+echo "Source Environment: ${SOURCE_ENV}"
+echo "Target Environment: $TARGET_ENV"
+echo ""
+
+########
+# Environment setup
+
+# Make sure we have the azure-devops extension installed
+echo ""
+echo "Ensuring azure-devops azcli extension is present"
+az extension add --name azure-devops
+if [ $? -ne 0 ] ; then
+  echo "Could not install azure-devops extension"
+  exit 1
+fi
+
