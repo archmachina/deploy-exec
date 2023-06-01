@@ -61,22 +61,12 @@ fi
 ########
 # Git information
 
-# Ensure we are on the source environment branch
-CURRENT_BRANCH=`git branch --show-current`
-echo "Current Branch: ${CURRENT_BRANCH}"
-if [ "$CURRENT_BRANCH" != "$SOURCE_ENV" ] ; then
-  echo "Not on correct branch to perform promotion"
-  echo "Current Branch: $CURRENT_BRANCH"
-  echo "Source Environment: $SOURCE_ENV"
-  exit 1
-fi
-
 # If this is a shallow clone, convert to a normal clone
 echo "Unshallow git repo"
 git fetch --unshallow
 
-# Fetching other branches
-echo "Fetching additional commits"
+# Fetching other branches and commits
+echo "Fetching additional branches and commits"
 git fetch --all || exit 1
 
 # Check if we have changes to promote
