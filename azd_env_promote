@@ -15,12 +15,6 @@ if [ $? -ne 0 ] ; then
   exit 1
 fi
 
-which jq > /dev/null
-if [ $? -ne 0 ] ; then
-  echo "jq is not installed"
-  exit 1
-fi
-
 which git > /dev/null
 if [ $? -ne 0 ] ; then
   echo "git is not installed"
@@ -35,25 +29,16 @@ PROMOTE_MAP="$1"
 shift
 SOURCE_ENV="$1"
 
-# Validate the promote map
-RESULT=`echo "${PROMOTE_MAP}" | jq -e 2>&1`
-if [ $? -ne 0 ] ; then
-  echo "Promote map is not formatted correctly:"
-  echo "$PROMOTE_MAP"
-  echo "$RESULT"
-  exit 1
-fi
-
 # Determine the target environment
-TARGET_ENV=`echo "${PROMOTE_MAP}" | jq -eMr .${SOURCE_ENV}`
+TARGET_ENV=`${DIR}/next_environment "${PROMOTE_MAP}" "${SOURCE_ENV}"`
 if [ $? -ne 0 ] ; then
   echo "Failed to determine the target environment: $TARGET_ENV"
   exit 1
 fi
 
 if [ "$TARGET_ENV" == "" ] ; then
-  echo "Empty target environment name"
-  exit 1
+  echo "No target environment to promote to"
+  exit 0
 fi
 
 # Display information on environments

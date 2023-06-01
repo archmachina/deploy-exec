@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Global settings
+SCRIPT=`readlink -f "$0"`
+DIR=`dirname "${SCRIPT}"`
+set -o pipefail
+
+# Setup
+which jq > /dev/null
+if [ $? -ne 0 ] ; then
+  echo "jq is not installed"
+  exit 1
+fi
+
+# Process command line arguments
+PROMOTE_MAP="$1"
+shift
+if [ "$PROMOTE_MAP" == "" ] ; then
+  echo "Empty or missing promote map"
+  exit 1
+fi
+
+SOURCE_ENV="$1"
+if [ "$SOURCE_ENV" == "" ] ; then
+  echo "Empty or missing source environment"
+  exit 1
+fi
+
+# Validate the promote map
+RESULT=`echo "${PROMOTE_MAP}" | jq -eMr 2>&1`
+if [ $? -ne 0 ] ; then
+  echo "Promote map is not formatted correctly:"
+  echo "$PROMOTE_MAP"
+  echo "$RESULT"
+  exit 1
+fi
+
+# Check if the source environment is present
+RESULT=`echo "${PROMOTE_MAP}" | jq -eMr "has(\"${SOURCE_ENV}\")" 2>&1`
+if [ $? -ne 0 ] ; then
+  # The source environment is not present, so there is no next environment
+  echo ""
+  exit 0
+fi
+
+# Determine next environment
+TARGET_ENV=`echo "${PROMOTE_MAP}" | jq -eMr .${SOURCE_ENV}`
+if [ $? -ne 0 ] ; then
+  echo "Failed to determine the target environment: $TARGET_ENV"
+  exit 1
+fi
+
+echo $TARGET_ENV
+exit 0
