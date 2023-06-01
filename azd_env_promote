@@ -70,7 +70,8 @@ echo "Fetching additional branches and commits"
 git fetch --all || exit 1
 
 # Check if we have changes to promote
-git diff --exit-code "origin/${SOURCE_ENV}" "origin/${TARGET_ENV}"
+echo "Checking for changes between branches"
+git diff --exit-code "origin/${SOURCE_ENV}" "origin/${TARGET_ENV}" >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
   echo "No changes from source to target. Not creating PR."
   exit 0
@@ -114,8 +115,13 @@ if [ $? -ne 0 ] ; then
 fi
 
 # Update the description on the PR
+echo "Updating PR description"
 az repos pr update --id "$PR_ID" --description "${DESCRIPTION}"
 if [ $? -ne 0 ] ; then
   echo "Failed to update PR description"
   exit 1
 fi
+
+echo "Finished promotion PR"
+
+exit 0
