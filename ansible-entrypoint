@@ -1,0 +1,90 @@
+#!/bin/bash
+
+#
+# This script will set up the environment for ansible to run a playbook,
+# configuring the python environment, downloading ansible collections and
+# displaying relevant runtime information.
+#
+# Requirements for the script to run:
+# + The playbook directory must be writeable - The python env and ansible cache
+#   are stored there.
+# + The playbook directory must have an ansible.cfg file
+# + The playbook directory must have a requirements.txt and requirements.yml file
+#   specifying the python and ansible requirements, respectively.
+#
+
+# Global settings
+SCRIPT=`readlink -f "$0"`
+DIR=`dirname "${SCRIPT}"`
+set -o pipefail
+
+# Every command in the script needs to complete successfully
+set -e
+
+########
+# Determine playbook and working directory
+PLAYBOOK=`readlink -f "$1"`
+shift
+WORKDIR=`dirname "${PLAYBOOK}"`
+ORIGDIR=`pwd`
+
+# Make sure the playbook exists before we start doing any work
+if [ \! -e "${PLAYBOOK}" ] ; then
+  echo "Playbook does not exist: ${PLAYBOOK}"
+  exit 1
+fi
+
+# Change to workdir temporarily - error handling by 'set -e'
+cd "${WORKDIR}"
+
+# Change HOME to WORKDIR
+HOME="${WORKDIR}"
+
+echo "Working directory: ${WORKDIR}"
+echo "New HOME directory: ${HOME}"
+
+########
+# Set up environment
+
+# Set up venv for ansible
+echo ""
+echo "Configuring python environment"
+echo "----------------"
+python3 -m venv env
+source ./env/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+
+# Resolve ansible requirements
+echo ""
+echo "Configuring ansible environment"
+echo "----------------"
+ansible-galaxy collection install -r requirements.yml
+
+# Ansible config file
+export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
+
+########
+# Start ansible playbook
+
+# Display run information
+echo ""
+echo "Ansible runtime information"
+echo "----------------"
+echo "Ansible Install Location: "
+which ansible-playbook
+echo ""
+echo "Ansible-Playbook Version: "
+ansible-playbook --version
+echo ""
+echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
+echo ""
+
+# Move back to origin directory before starting the playbook
+cd "${ORIGDIR}"
+
+echo "Starting ansible playbook"
+echo "----------------"
+exec ansible-playbook "${PLAYBOOK}" "$@"
+
+exit 1
