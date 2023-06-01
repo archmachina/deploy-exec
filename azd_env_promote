@@ -66,6 +66,8 @@ CURRENT_BRANCH=`git branch --show-current`
 echo "Current Branch: ${CURRENT_BRANCH}"
 if [ "$CURRENT_BRANCH" != "$SOURCE_ENV" ] ; then
   echo "Not on correct branch to perform promotion"
+  echo "Current Branch: $CURRENT_BRANCH"
+  echo "Source Environment: $SOURCE_ENV"
   exit 1
 fi
 
@@ -85,8 +87,8 @@ if [ $? -eq 0 ] ; then
 fi
 
 # Generate the description
-SOURCE_COMMITS=`git log --no-merges --no-decorate "origin/${SOURCE_ENV}" "^origin/${TARGET_ENV}" | head -20`
-TARGET_COMMITS=`git log --no-merges --no-decorate "origin/${TARGET_ENV}" "^origin/${SOURCE_ENV}" | head -20`
+SOURCE_COMMITS=`git log --no-merges --no-decorate --oneline "origin/${SOURCE_ENV}" "^origin/${TARGET_ENV}" | head -20`
+TARGET_COMMITS=`git log --no-merges --no-decorate --oneline "origin/${TARGET_ENV}" "^origin/${SOURCE_ENV}" | head -20`
 DESCRIPTION="
 Promotion Details:
 \`\`\`
