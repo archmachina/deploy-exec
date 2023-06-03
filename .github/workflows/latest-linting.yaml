@@ -1,0 +1,30 @@
+name: latest-linting
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  latest_linting:
+    name: "latest-linting"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: linting
+        uses: github/super-linter@v5
+        env:
+          VALIDATE_ALL_CODEBASE: true
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
