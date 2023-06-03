@@ -3,6 +3,6 @@
 # Fail if the VAULT_PASS environment var is empty
 [ "$VAULT_PASS" == "" ] && exit 1
 
-echo $VAULT_PASS
+echo "$VAULT_PASS"
 
 exit 0
