@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Global settings
-SCRIPT=$(readlink -f "$0")
 set -o pipefail
 
 # Setup
