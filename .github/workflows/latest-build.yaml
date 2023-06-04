@@ -1,3 +1,5 @@
+---
+
 name: latest-build
 on:
   workflow_dispatch:

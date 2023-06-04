@@ -14,8 +14,7 @@
 #
 
 # Global settings
-SCRIPT=`readlink -f "$0"`
-DIR=`dirname "${SCRIPT}"`
+SCRIPT=$(readlink -f "$0")
 set -o pipefail
 
 # Every command in the script needs to complete successfully
@@ -23,13 +22,13 @@ set -e
 
 ########
 # Determine playbook and working directory
-PLAYBOOK=`readlink -f "$1"`
+PLAYBOOK=$(readlink -f "$1")
 shift
-WORKDIR=`dirname "${PLAYBOOK}"`
-ORIGDIR=`pwd`
+WORKDIR=$(dirname "${PLAYBOOK}")
+ORIGDIR=$(pwd)
 
 # Make sure the playbook exists before we start doing any work
-if [ \! -e "${PLAYBOOK}" ] ; then
+if [ \! -f "${PLAYBOOK}" ] ; then
   echo "Playbook does not exist: ${PLAYBOOK}"
   exit 1
 fi
