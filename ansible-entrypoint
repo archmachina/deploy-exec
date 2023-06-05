@@ -46,19 +46,31 @@ echo "New HOME directory: ${HOME}"
 
 # Set up venv for ansible
 echo ""
-echo "Configuring python environment"
+echo "Configuring python virtualenv"
 echo "----------------"
 python3 -m venv env
 # shellcheck disable=SC1091
 source ./env/bin/activate
+
+echo ""
+echo "Configuring pip"
+echo "----------------"
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
+python3 -m pip list
 
 # Resolve ansible requirements
 echo ""
-echo "Configuring ansible environment"
+echo "Installing ansible collections"
 echo "----------------"
 ansible-galaxy collection install -r requirements.yml
+ansible-galaxy collection list
+
+echo ""
+echo "Installing ansible roles"
+echo "----------------"
+ansible-galaxy role install -r requirements.yml
+ansible-galaxy role list
 
 # Ansible config file
 export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
@@ -70,8 +82,7 @@ export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
 echo ""
 echo "Ansible runtime information"
 echo "----------------"
-echo "Ansible Install Location: "
-which ansible-playbook
+echo "Ansible Install Location: $(which ansible-playbook)"
 echo ""
 echo "Ansible-Playbook Version: "
 ansible-playbook --version
