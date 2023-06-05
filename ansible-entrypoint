@@ -73,7 +73,16 @@ ansible-galaxy role install -r requirements.yml
 ansible-galaxy role list
 
 # Ansible config file
+echo ""
+echo "Setting ansible.cfg location"
+echo "----------------"
 export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
+if [ ! -f "${ANSIBLE_CONFIG}" ] ; then
+  echo "Missing ansible.cfg file: ${ANSIBLE_CONFIG}"
+  exit 1
+fi
+echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
+echo ""
 
 ########
 # Start ansible playbook
@@ -86,8 +95,6 @@ echo "Ansible Install Location: $(which ansible-playbook)"
 echo ""
 echo "Ansible-Playbook Version: "
 ansible-playbook --version
-echo ""
-echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
 echo ""
 
 # Move back to origin directory before starting the playbook
