@@ -75,14 +75,14 @@ python3 -m pip list
 echo ""
 echo "Installing ansible collections"
 echo "----------------"
-[ ! -d "${HOME}/.ansible/collections" ] && mkdir -p "${HOME}/.ansible/collections"
+[ ! -d "${ANSIBLE_HOME}/collections" ] && mkdir -p "${ANSIBLE_HOME}/collections"
 ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection list
 
 echo ""
 echo "Installing ansible roles"
 echo "----------------"
-[ ! -d "${HOME}/.ansible/roles" ] && mkdir -p "${HOME}/.ansible/roles"
+[ ! -d "${ANSIBLE_HOME}/roles" ] && mkdir -p "${ANSIBLE_HOME}/roles"
 ansible-galaxy role install -r requirements.yml
 ansible-galaxy role list
 
