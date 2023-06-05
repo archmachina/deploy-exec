@@ -12,7 +12,7 @@ ansible-entrypoint provides a wrapper to call the ansible-playbook command. The 
 * Installs ansible collections and roles as per requirements.yml
 
 Example:
-```
+```bash
 ./deploy-exec/ansible-entrypoint ./main.yml -i ./inventory/dev/ -v
 ```
 

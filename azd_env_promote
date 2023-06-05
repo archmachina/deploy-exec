@@ -28,8 +28,7 @@ shift
 SOURCE_ENV="$1"
 
 # Determine the target environment
-TARGET_ENV=$("${DIR}"/next_environment "${PROMOTE_MAP}" "${SOURCE_ENV}")
-if [ $? -ne 0 ] ; then
+if ! TARGET_ENV=$("${DIR}"/next_environment "${PROMOTE_MAP}" "${SOURCE_ENV}") ; then
   echo "Failed to determine the target environment: $TARGET_ENV"
   exit 1
 fi
@@ -104,8 +103,8 @@ az repos pr create --detect -s "${SOURCE_ENV}" -t "${TARGET_ENV}" --squash false
 
 # Retrieve the PR, which we may have created or may have already existed
 echo "Retrieving PR for promotion"
-PR_ID=$(az repos pr list -s "${SOURCE_ENV}" -t "${TARGET_ENV}" | jq '.[0].pullRequestId')
-if [ $? -ne 0 ] ; then
+
+if ! PR_ID=$(az repos pr list -s "${SOURCE_ENV}" -t "${TARGET_ENV}" | jq '.[0].pullRequestId') ; then
   echo "Failed to retrieve the ID for the promotion PR"
   exit 1
 fi
