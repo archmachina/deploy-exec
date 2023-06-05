@@ -1,6 +1,6 @@
 ---
 
-name: latest-build
+name: latest-testing
 on:
   workflow_dispatch:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   latest:
-    name: "latest-build"
+    name: "latest-testing"
     runs-on: ubuntu-latest
 
     steps:

@@ -4,8 +4,8 @@
 set -o pipefail
 
 # Setup
-which jq > /dev/null
-if [ $? -ne 0 ] ; then
+
+if ! which jq > /dev/null 2>&1 ; then
   echo "jq is not installed"
   exit 1
 fi
