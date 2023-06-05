@@ -67,7 +67,7 @@ git fetch --all || exit 1
 
 # Check if we have changes to promote
 echo "Checking for changes between branches"
-if ! git diff --exit-code "origin/${SOURCE_ENV}" "origin/${TARGET_ENV}" >/dev/null 2>&1 ; then
+if git diff --exit-code "origin/${SOURCE_ENV}" "origin/${TARGET_ENV}" >/dev/null 2>&1 ; then
   echo "No changes from source to target. Not creating PR."
   exit 0
 fi
