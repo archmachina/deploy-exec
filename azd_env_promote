@@ -103,8 +103,7 @@ az repos pr create --detect -s "${SOURCE_ENV}" -t "${TARGET_ENV}" --squash false
 
 # Retrieve the PR, which we may have created or may have already existed
 echo "Retrieving PR for promotion"
-
-if ! PR_ID=$(az repos pr list -s "${SOURCE_ENV}" -t "${TARGET_ENV}" | jq '.[0].pullRequestId') ; then
+if ! PR_ID=$(az repos pr list -s "${SOURCE_ENV}" -t "${TARGET_ENV}" | jq -eMr '.[0].pullRequestId') ; then
   echo "Failed to retrieve the ID for the promotion PR"
   exit 1
 fi
