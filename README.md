@@ -16,7 +16,7 @@ Example:
 ./deploy-exec/ansible-entrypoint ./main.yml -i ./inventory/dev/ -v
 ```
 
-ansible-entrypoint will set the HOME directory to the playbook directory and any roles, collections, python modules or caches will be stored there.
+ansible-entrypoint will set ANSIBLE_HOME to the <PLAYBOOK_DIR>/.ansible, where any roles or collections will be installed.
 
 ## azd_env_promote
 

@@ -35,11 +35,23 @@ fi
 # Change to workdir temporarily - error handling by 'set -e'
 cd "${WORKDIR}"
 
-# Change HOME to WORKDIR
-HOME="${WORKDIR}"
+# Ansible environment vars config
+echo ""
+echo "Setting ansible environment vars"
+echo "----------------"
 
-echo "Working directory: ${WORKDIR}"
-echo "New HOME directory: ${HOME}"
+export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
+if [ ! -f "${ANSIBLE_CONFIG}" ] ; then
+  echo "Missing ansible.cfg file: ${ANSIBLE_CONFIG}"
+  exit 1
+fi
+
+export ANSIBLE_HOME="${WORKDIR}/.ansible"
+[ ! -d "${ANSIBLE_HOME}" ] && mkdir -p "${ANSIBLE_HOME}"
+
+echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
+echo "ANSIBLE_HOME: ${ANSIBLE_HOME}"
+echo ""
 
 ########
 # Set up environment
@@ -73,18 +85,6 @@ echo "----------------"
 [ ! -d "${HOME}/.ansible/roles" ] && mkdir -p "${HOME}/.ansible/roles"
 ansible-galaxy role install -r requirements.yml
 ansible-galaxy role list
-
-# Ansible config file
-echo ""
-echo "Setting ansible.cfg location"
-echo "----------------"
-export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
-if [ ! -f "${ANSIBLE_CONFIG}" ] ; then
-  echo "Missing ansible.cfg file: ${ANSIBLE_CONFIG}"
-  exit 1
-fi
-echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
-echo ""
 
 ########
 # Start ansible playbook
