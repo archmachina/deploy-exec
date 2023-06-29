@@ -1,0 +1,300 @@
+#!/bin/bash
+
+# Global settings
+set -o pipefail
+
+# Support functions
+
+function next_env() {
+  # Setup
+  if ! which jq > /dev/null 2>&1 ; then
+    echo "jq is not installed"
+    return 1
+  fi
+
+  # Process command line arguments
+  PROMOTE_MAP="$1"
+  if [ "$PROMOTE_MAP" == "" ] ; then
+    echo "Empty or missing promote map"
+    return 1
+  fi
+
+  SOURCE_ENV="$2"
+  if [ "$SOURCE_ENV" == "" ] ; then
+    echo "Empty or missing source environment"
+    return 1
+  fi
+
+  # Validate the promote map
+  if ! RESULT=$(echo "${PROMOTE_MAP}" | jq -eMr 2>&1) ; then
+    echo "Promote map is not formatted correctly:"
+    echo "$PROMOTE_MAP"
+    echo "$RESULT"
+    return 1
+  fi
+
+  # Check if the source environment is present
+  if ! RESULT=$(echo "${PROMOTE_MAP}" | jq -eMr "has(\"${SOURCE_ENV}\")" 2>&1) ; then
+    # The source environment is not present, so there is no next environment
+    echo ""
+    exit 0
+  fi
+
+  # Determine next environment
+  if ! TARGET_ENV=$(echo "${PROMOTE_MAP}" | jq -eMr ."${SOURCE_ENV}") ; then
+    echo "Failed to determine the target environment: $TARGET_ENV"
+    return 1
+  fi
+
+  echo "$TARGET_ENV"
+
+  return 0
+}
+
+function env_promote() {
+  # Ensure relevant commands are available
+  if ! which az > /dev/null 2>&1 ; then
+    echo "Azure CLI is not installed"
+    return 1
+  fi
+
+  if ! which git > /dev/null 2>&1 ; then
+    echo "git is not installed"
+    return 1
+  fi
+
+  ########
+  # Process inputs
+
+  # First argument is the map and the second is the current environment
+  PROMOTE_MAP="$1"
+  SOURCE_ENV="$2"
+
+  # Determine the target environment
+  if ! TARGET_ENV=$(next_env "${PROMOTE_MAP}" "${SOURCE_ENV}") ; then
+    echo "Failed to determine the target environment: $TARGET_ENV"
+    return 1
+  fi
+
+  if [ "$TARGET_ENV" == "" ] ; then
+    echo "No target environment to promote to"
+    exit 0
+  fi
+
+  # Display information on environments
+  echo "Promote Map:"
+  echo "${PROMOTE_MAP}" | jq -eM
+  echo ""
+  echo "Source Environment: ${SOURCE_ENV}"
+  echo "Target Environment: $TARGET_ENV"
+  echo ""
+
+  # Make sure we have the azure-devops extension installed
+  echo ""
+  echo "Ensuring azure-devops azcli extension is present"
+  if ! az extension add --name azure-devops ; then
+    echo "Could not install azure-devops extension"
+    return 1
+  fi
+
+  ########
+  # Git information
+
+  # If this is a shallow clone, convert to a normal clone
+  echo "Unshallow git repo"
+  git fetch --unshallow
+
+  # Fetching other branches and commits
+  echo "Fetching additional branches and commits"
+  git fetch --all || return 1
+
+  # Check if we have changes to promote
+  echo "Checking for changes between branches"
+  if git diff --exit-code "origin/${SOURCE_ENV}" "origin/${TARGET_ENV}" >/dev/null 2>&1 ; then
+    echo "No changes from source to target. Not creating PR."
+    exit 0
+  fi
+
+  # Generate the description
+  SOURCE_COMMITS=$(git log --no-merges --no-decorate --oneline "origin/${SOURCE_ENV}" "^origin/${TARGET_ENV}" | head -20)
+  TARGET_COMMITS=$(git log --no-merges --no-decorate --oneline "origin/${TARGET_ENV}" "^origin/${SOURCE_ENV}" | head -20)
+  DESCRIPTION="
+Promotion Details:
+\`\`\`
+Source Branch: $SOURCE_ENV
+Target Branch: $TARGET_ENV
+\`\`\`
+
+Change to promote (last 20):
+\`\`\`
+${SOURCE_COMMITS}
+\`\`\`
+
+Changes in target, but not in source (last 20):
+\`\`\`
+${TARGET_COMMITS}
+\`\`\`
+"
+  echo "PR Description:"
+  echo "${DESCRIPTION}"
+
+  # Attempt to create a PR from the source to the target. Ignore failure as it
+  # may already exist. If it's a failure for another reason, we'll catch that later.
+  echo "Attempting to create PR - Ignore failure"
+  az repos pr create --detect -s "${SOURCE_ENV}" -t "${TARGET_ENV}" --squash false \
+    --title "Promote ${SOURCE_ENV} to ${TARGET_ENV}" --description "${DESCRIPTION}"
+
+  # Retrieve the PR, which we may have created or may have already existed
+  echo "Retrieving PR for promotion"
+  if ! PR_ID=$(az repos pr list -s "${SOURCE_ENV}" -t "${TARGET_ENV}" | jq -eMr '.[0].pullRequestId') ; then
+    echo "Failed to retrieve the ID for the promotion PR"
+    return 1
+  fi
+
+  # Update the description on the PR
+  echo "Updating PR description"
+  if ! az repos pr update --id "$PR_ID" --description "${DESCRIPTION}" ; then
+    echo "Failed to update PR description"
+    return 1
+  fi
+
+  echo "Finished promotion PR"
+
+  return 0
+}
+
+function ansible_playbook() {
+  # Error handling
+  set -e
+
+  # Determine playbook and working directory
+  PLAYBOOK=$(readlink -f "$1")
+  shift
+  WORKDIR=$(dirname "${PLAYBOOK}")
+  ORIGDIR=$(pwd)
+
+  # Make sure the playbook exists before we start doing any work
+  if [ ! -f "${PLAYBOOK}" ] ; then
+    echo "Playbook does not exist: ${PLAYBOOK}"
+    return 1
+  fi
+
+  # Change to workdir temporarily - error handling by 'set -e'
+  cd "${WORKDIR}"
+
+  # Ansible environment vars config
+  echo ""
+  echo "Setting ansible environment vars"
+  echo "----------------"
+
+  export ANSIBLE_CONFIG="${WORKDIR}/ansible.cfg"
+  if [ ! -f "${ANSIBLE_CONFIG}" ] ; then
+    echo "Missing ansible.cfg file: ${ANSIBLE_CONFIG}"
+    return 1
+  fi
+
+  export ANSIBLE_HOME="${WORKDIR}/.ansible"
+  [ ! -d "${ANSIBLE_HOME}" ] && mkdir -p "${ANSIBLE_HOME}"
+
+  echo "ANSIBLE_CONFIG: ${ANSIBLE_CONFIG}"
+  echo "ANSIBLE_HOME: ${ANSIBLE_HOME}"
+  echo ""
+
+  ########
+  # Set up environment
+
+  # Set up venv for ansible
+  echo ""
+  echo "Configuring python virtualenv"
+  echo "----------------"
+  python3 -m venv env
+  # shellcheck disable=SC1091
+  source ./env/bin/activate
+
+  echo ""
+  echo "Configuring pip"
+  echo "----------------"
+  python3 -m pip install --upgrade pip
+  python3 -m pip install -r requirements.txt
+  python3 -m pip list
+
+  # Resolve ansible requirements
+  echo ""
+  echo "Installing ansible collections"
+  echo "----------------"
+  [ ! -d "${ANSIBLE_HOME}/collections" ] && mkdir -p "${ANSIBLE_HOME}/collections"
+  ansible-galaxy collection install -r requirements.yml
+  ansible-galaxy collection list
+
+  echo ""
+  echo "Installing ansible roles"
+  echo "----------------"
+  [ ! -d "${ANSIBLE_HOME}/roles" ] && mkdir -p "${ANSIBLE_HOME}/roles"
+  ansible-galaxy role install -r requirements.yml
+  ansible-galaxy role list
+
+  ########
+  # Start ansible playbook
+
+  # Display run information
+  echo ""
+  echo "Ansible runtime information"
+  echo "----------------"
+  echo "Ansible Install Location: $(which ansible-playbook)"
+  echo ""
+  echo "Ansible-Playbook Version: "
+  ansible-playbook --version
+  echo ""
+
+  # Move back to origin directory before starting the playbook
+  cd "${ORIGDIR}"
+
+  echo "Starting ansible playbook"
+  echo "----------------"
+  exec ansible-playbook "${PLAYBOOK}" "$@"
+
+  return 1
+}
+
+function usage() {
+  cat <<_EOF_
+commands:
+  next_env
+  env_promote
+  ansible-playbook
+_EOF_
+}
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+  next_env)
+    if ! next_env "$@" ; then
+      echo "Failed to perform next_env"
+      exit 1
+    fi
+    ;;
+  env_promote)
+    if ! env_promote "$@" ; then
+      echo "Failed to perform env_promote"
+      exit 1
+    fi
+    ;;
+  ansible-playbook)
+    if ! ansible_playbook "$@" ; then
+      echo "Failed to run ansible-playbook"
+      exit 1
+    fi
+    ;;
+  ""|"help")
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown command: $COMMAND"
+    exit 1
+    ;;
+esac
+
+exit 0
