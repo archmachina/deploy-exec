@@ -8,7 +8,9 @@ set -o pipefail
 SEMVER_REGEX='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
 
 function github_release() {
-  while getopts "o:r:a:t:d:p:n:" opt ; do
+  GITHUB_GENERATE_NOTES='false'
+
+  while getopts "o:r:a:t:d:p:n:g" opt ; do
     case "${opt}" in
       o)
         GITHUB_OWNER="${OPTARG}"
@@ -30,6 +32,9 @@ function github_release() {
         ;;
       n)
         GITHUB_RELEASE_NAME="${OPTARG}"
+        ;;
+      g)
+        GITHUB_GENERATE_NOTES='true'
         ;;
       h)
         ;;
@@ -83,17 +88,20 @@ function github_release() {
 
   GITHUB_DATA=$(cat <<_EOF_
 {
-  "tag_name: "${TAG_NAME}",
-  "name": "${RELEASE_NAME}",
-  "draft": ${DRAFT},
-  "prerelease": ${PRERELEASE}
+  "tag_name": "${GITHUB_TAG}",
+  "name": "${GITHUB_RELEASE_NAME}",
+  "draft": ${GITHUB_DRAFT},
+  "prerelease": ${GITHUB_PRERELEASE},
+  "generate_release_notes": ${GITHUB_GENERATE_NOTES}
 }
 _EOF_
 )
-  if ! curl --fail-with-body -X POST "https://api.github.com/repos/${OWNER}/${REPO}/releases" \
+  echo "Post data: ${GITHUB_DATA}"
+  if ! curl --fail-with-body -X POST "https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases" \
     -H "Accept: application/vnd.github.v3+json" \
-    -H "Authorization: token ${TOKEN}" \
+    -H "Authorization: token ${GITHUB_AUTH}" \
     -H "Content-Type: application/json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
     -d "$GITHUB_DATA" ; then
 
     echo "Failed to create GitHub release"
