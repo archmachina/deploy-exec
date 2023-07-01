@@ -5,6 +5,70 @@ set -o pipefail
 
 # Support functions
 
+SEMVER_REGEX='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+
+function assert() {
+  if ! "$@" ; then
+    echo "Command ($@) failed"
+    exit 1
+  fi
+}
+
+function semver_strip() {
+  VER="$1"
+
+  # Strip git tag reference, if present
+  VER="${VER#refs/tags/}"
+
+  # Strip leading 'v', if present
+  VER="${VER#v}"
+
+  echo "$VER"
+}
+
+function get_semver_match() {
+  # Read a potential match per line on stdin
+  while read -r LINE ; do
+    [ "$LINE" == "" ] && continue
+
+    # Strip allowed leading characters
+    LINE=$(semver_strip "$LINE")
+
+    if [[ "${LINE}" =~ $SEMVER_REGEX ]] ; then
+      # line matches
+      echo "${LINE}"
+
+      return 0
+    fi
+  done
+
+  # no items matched
+  return 1
+}
+
+function split_semver_string() {
+  VER="$1"
+
+  # Strip allowed leading characters
+  VER=$(semver_strip "$LINE")
+
+  if [[ "$VER" =~ $SEMVER_REGEX ]] ; then
+    # Match for regex
+
+    SEMVER_FULL="${BASH_REMATCH[0]}"
+    SEMVER_MAJOR="${BASH_REMATCH[1]}"
+    SEMVER_MINOR="${BASH_REMATCH[2]}"
+    SEMVER_PATCH="${BASH_REMATCH[3]}"
+    SEMVER_PRERELEASE="${BASH_REMATCH[5]}"
+    SEMVER_BUILDMETA="${BASH_REMATCH[10]}"
+
+    return 0
+  else
+    # not a valid semver string
+    return 1
+  fi
+}
+
 function next_env() {
   # Setup
   if ! which jq > /dev/null 2>&1 ; then
