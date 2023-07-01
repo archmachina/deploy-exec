@@ -46,11 +46,11 @@ function get_semver_match() {
   return 1
 }
 
-function split_semver_string() {
+function semver_extract() {
   VER="$1"
 
   # Strip allowed leading characters
-  VER=$(semver_strip "$LINE")
+  VER=$(semver_strip "$VER")
 
   if [[ "$VER" =~ $SEMVER_REGEX ]] ; then
     # Match for regex
@@ -62,9 +62,16 @@ function split_semver_string() {
     SEMVER_PRERELEASE="${BASH_REMATCH[5]}"
     SEMVER_BUILDMETA="${BASH_REMATCH[10]}"
 
+    # Make sure we have content for the mandatory components
+    if [ "${SEMVER_FULL}" == "" ] || [ "${SEMVER_MAJOR}" == "" ] || [ "${SEMVER_MINOR}" == "" ] || [ "${SEMVER_PATCH}" == "" ] ; then
+      echo "Failed to extract mandatory components of semver version"
+      return 1
+    fi
+
     return 0
   else
     # not a valid semver string
+    echo "Not a valid semver version ($VER)"
     return 1
   fi
 }
