@@ -7,11 +7,109 @@ set -o pipefail
 
 SEMVER_REGEX='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
 
+function github_release() {
+  while getopts "o:r:a:t:d:p:n:" opt ; do
+    case "${opt}" in
+      o)
+        GITHUB_OWNER="${OPTARG}"
+        ;;
+      r)
+        GITHUB_REPO="${OPTARG}"
+        ;;
+      a)
+        GITHUB_AUTH="${OPTARG}"
+        ;;
+      t)
+        GITHUB_TAG="${OPTARG}"
+        ;;
+      d)
+        GITHUB_DRAFT="${OPTARG}"
+        ;;
+      p)
+        GITHUB_PRERELEASE="${OPTARG}"
+        ;;
+      n)
+        GITHUB_RELEASE_NAME="${OPTARG}"
+        ;;
+      h)
+        ;;
+    esac
+  done
+
+  if [ "$GITHUB_OWNER" == "" ] ; then
+    echo "GITHUB_OWNER (o) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_REPO" == "" ] ; then
+    echo "GITHUB_REPO (r) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_AUTH" == "" ] ; then
+    echo "GITHUB_AUTH (a) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_TAG" == "" ] ; then
+    echo "GITHUB_TAG (t) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_DRAFT" == "" ] ; then
+    echo "GITHUB_DRAFT (d) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_DRAFT" != "true" ] && [ "$GITHUB_DRAFT" != "false" ]; then
+    echo "GITHUB_DRAFT (d) must be 'true' or 'false'"
+    return 1
+  fi
+
+  if [ "$GITHUB_PRERELEASE" == "" ] ; then
+    echo "GITHUB_PRERELEASE (p) is empty"
+    return 1
+  fi
+
+  if [ "$GITHUB_PRERELEASE" != "true" ] && [ "$GITHUB_PRERELEASE" != "false" ]; then
+    echo "GITHUB_PRERELEASE (d) must be 'true' or 'false'"
+    return 1
+  fi
+
+  if [ "$GITHUB_RELEASE_NAME" == "" ] ; then
+    echo "GITHUB_RELEASE_NAME (n) is empty"
+    return 1
+  fi
+
+  GITHUB_DATA=$(cat <<_EOF_
+{
+  "tag_name: "${TAG_NAME}",
+  "name": "${RELEASE_NAME}",
+  "draft": ${DRAFT},
+  "prerelease": ${PRERELEASE}
+}
+_EOF_
+)
+  if ! curl --fail-with-body -X POST "https://api.github.com/repos/${OWNER}/${REPO}/releases" \
+    -H "Accept: application/vnd.github.v3+json" \
+    -H "Authorization: token ${TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "$GITHUB_DATA" ; then
+
+    echo "Failed to create GitHub release"
+    return 1
+  fi
+
+  return 0
+}
+
 function assert() {
   if ! "$@" ; then
     echo "assertion ($@) failed" >&2
     exit 1
   fi
+
+  return 0
 }
 
 function semver_strip() {

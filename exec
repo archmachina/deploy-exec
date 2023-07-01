@@ -22,6 +22,12 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
+  github_release)
+    if ! github_release "$@" ; then
+      echo "Failed to perform github_release"
+      exit 1
+    fi
+    ;;
   next_env)
     if ! next_env "$@" ; then
       echo "Failed to perform next_env"
