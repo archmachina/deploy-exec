@@ -8,8 +8,9 @@ set -o pipefail
 SEMVER_REGEX='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
 
 function assert() {
+  echo "assert: $@"
   if ! "$@" ; then
-    echo "Command ($@) failed"
+    echo "assertion ($@) failed"
     exit 1
   fi
 }
