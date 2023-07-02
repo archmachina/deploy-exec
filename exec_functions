@@ -121,6 +121,19 @@ function assert() {
   return 0
 }
 
+function assert_msg() {
+  MSG="$1"
+  shift
+
+  echo "Asserting: ($MSG) $@" >&2
+  if ! "$@" ; then
+    echo "assertion ($MSG) ($@) failed" >&2
+    exit 1
+  fi
+
+  return 0
+}
+
 function semver_strip() {
   VER="$1"
 
