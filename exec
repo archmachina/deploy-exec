@@ -34,8 +34,8 @@ case "$COMMAND" in
       exit 1
     fi
     ;;
-  env_promote)
-    if ! env_promote "$@" ; then
+  azd_env_promote)
+    if ! azd_env_promote "$@" ; then
       echo "Failed to perform env_promote"
       exit 1
     fi

@@ -245,7 +245,7 @@ function next_env() {
   return 0
 }
 
-function env_promote() {
+function azd_env_promote() {
   # Ensure relevant commands are available
   if ! which az > /dev/null 2>&1 ; then
     echo "Azure CLI is not installed"
